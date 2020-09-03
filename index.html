@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+    <meta charset="utf-8" />
+    <head>
+        <title>Minesweeper</title>
+        <style>
+            .grid {
+                background-color: grey;
+                width: 400px;
+                height: 400px;
+                display: flex;
+                flex-wrap: wrap;
+            }
+            .grid div {
+                width: 40px;
+                height: 40px;
+                text-align: center;
+                vertical-align: center;
+                font-size: 30px;
+            }
+            .grid div:hover {
+                background-color: lightgrey;
+            }
+            .clicked {
+                background-color: lightgrey;
+            }
+            .bomb {
+                background-color: red;
+            }
+        </style>
+        <script>
+            document.addEventListener('DOMContentLoaded', createGame);
+            const width = 10;
+            const height = 10;
+            const numberOfBombs = 10;
+            const showIndizes = false;
+            const squares = [];
+            const empty = Array((width*height)-numberOfBombs).fill(0)
+            const bombs = Array(numberOfBombs).fill('bomb')
+            const tiles = [...empty, ...bombs].sort(() => Math.random() - 0.5)
+            let isGameOver = false;
+            function createGame() {
+                const grid = document.getElementById('grid');
+                for (let i = 0; i < width*height; i++) {
+                    const square = document.createElement('div');
+                    square.setAttribute('id', i.toString())
+                    if (showIndizes) square.innerText = i
+                    grid.appendChild(square)
+                    squares.push(square)
+                    square.addEventListener('click', () => click(square))
+                    square.addEventListener('contextmenu', (e) => contextmenu(e, square))
+                }
+                for (let [index, tile] of tiles.entries()) {
+                    if (tile === 'bomb')
+                        continue;
+                    let total = 0;
+                    if (!isLeft(index) && tiles[index-1] === 'bomb') total++;
+                    if (!isLeft(index) && !isTop(index) && tiles[index-width-1] === 'bomb') total++;
+                    if (!isLeft(index) && !isBottom(index) && tiles[index+width-1] === 'bomb') total++;
+                    if (!isRight(index) && tiles[index+1] === 'bomb') total++;
+                    if (!isRight(index) && !isTop(index) && tiles[index-width+1] === 'bomb') total++;
+                    if (!isRight(index) && !isBottom(index) && tiles[index+width+1] === 'bomb') total++;
+                    if (!isTop(index) && tiles[index+width] === 'bomb') total++;
+                    if (!isBottom(index) && tiles[index-width] === 'bomb') total++;
+                    tiles[index] = total
+                }
+            }
+            function click(square) {
+                if (isGameOver) return;
+                if (square.innerText === '🚩') return;
+                const index = square.id;
+                if (tiles[index] === 'clicked') return;
+                if (tiles[index] === 'bomb') {
+                    square.setAttribute('class', 'bomb')
+                    square.innerText = '💣'
+                    gameOver();
+                    return
+                }
+                if (tiles[index] !== 'empty') square.innerText = tiles[index] || square.innerText
+                square.setAttribute('class', 'clicked')
+                // tiles[index] = 'clicked'
+                checkSurroundingTiles(square, index)
+            }
+
+            function checkSurroundingTiles(square, index) {
+                if (tiles[index] !== 'empty') return;
+                console.log('check neibours')
+            }
+
+            function contextmenu(event, square) {
+                event.preventDefault();
+                if (square.innerText !== '🚩') {
+                    square.innerText = '🚩'
+                    return
+                }
+                square.innerText = showIndizes ? square.id : ''
+            }
+
+            function gameOver() {
+                isGameOver = true;
+                const button = document.createElement('button')
+                button.innerText = 'Restart Game'
+                button.addEventListener('click', () => location.reload())
+                document.body.appendChild(button)
+            }
+
+            function isLeft(number) {
+                return number%width === 0
+            }
+
+            function isRight(number) {
+                return number%width === width-1
+            }
+
+            function isTop(number) {
+                return number >= 0 && number <= width-1
+            }
+
+            function isBottom(number) {
+                return number >= ((width*height) - width) && number <= width*height
+            }
+        </script>
+    </head>
+    <body>
+        <div class="grid" id="grid"></div>
+    </body>
+</html>
