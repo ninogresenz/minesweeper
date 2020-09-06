@@ -5,24 +5,26 @@
         <title>Minesweeper</title>
         <style>
             .grid {
-                background-color: grey;
                 width: 400px;
                 height: 400px;
                 display: flex;
                 flex-wrap: wrap;
             }
             .grid div {
+                background-color: grey;
                 width: 40px;
                 height: 40px;
                 text-align: center;
                 vertical-align: center;
                 font-size: 30px;
+                box-shadow: inset -1px -1px 2px 1px rgba(0,0,0,0.75);
+                border-radius: 5px 5px 5px 5px;
             }
             .grid div:hover {
                 background-color: lightgrey;
             }
             .clicked {
-                background-color: lightgrey;
+                background-color: lightgrey !important
             }
             .bomb {
                 background-color: red;
@@ -32,19 +34,20 @@
             document.addEventListener('DOMContentLoaded', createGame);
             const width = 10;
             const height = 10;
-            const numberOfBombs = 10;
+            const numberOfBombs = 15;
             const showIndizes = false;
             const squares = [];
             const empty = Array((width*height)-numberOfBombs).fill(0)
             const bombs = Array(numberOfBombs).fill('bomb')
             const tiles = [...empty, ...bombs].sort(() => Math.random() - 0.5)
             let isGameOver = false;
+            const clicked = [];
             function createGame() {
                 const grid = document.getElementById('grid');
                 for (let i = 0; i < width*height; i++) {
                     const square = document.createElement('div');
                     square.setAttribute('id', i.toString())
-                    if (showIndizes) square.innerText = i
+                    if (showIndizes) square.innerText = i.toString()
                     grid.appendChild(square)
                     squares.push(square)
                     square.addEventListener('click', () => click(square))
@@ -54,41 +57,59 @@
                     if (tile === 'bomb')
                         continue;
                     let total = 0;
-                    if (!isLeft(index) && tiles[index-1] === 'bomb') total++;
-                    if (!isLeft(index) && !isTop(index) && tiles[index-width-1] === 'bomb') total++;
-                    if (!isLeft(index) && !isBottom(index) && tiles[index+width-1] === 'bomb') total++;
-                    if (!isRight(index) && tiles[index+1] === 'bomb') total++;
-                    if (!isRight(index) && !isTop(index) && tiles[index-width+1] === 'bomb') total++;
-                    if (!isRight(index) && !isBottom(index) && tiles[index+width+1] === 'bomb') total++;
-                    if (!isTop(index) && tiles[index+width] === 'bomb') total++;
-                    if (!isBottom(index) && tiles[index-width] === 'bomb') total++;
+                    if (!isTop(index) && tiles[topIndex(index)] === 'bomb') total++;
+                    if (!isTop(index) && !isLeft(index) && tiles[topLeftIndex(index)] === 'bomb') total++;
+                    if (!isTop(index) && !isRight(index) && tiles[topRightIndex(index)] === 'bomb') total++;
+                    if (!isBottom(index) && tiles[bottomIndex(index)] === 'bomb') total++;
+                    if (!isBottom(index) && !isLeft(index) && tiles[bottomLeftIndex(index)] === 'bomb') total++;
+                    if (!isBottom(index) && !isRight(index) && tiles[bottomRightIndex(index)] === 'bomb') total++;
+                    if (!isRight(index) && tiles[rightIndex(index)] === 'bomb') total++;
+                    if (!isLeft(index) && tiles[leftIndex(index)] === 'bomb') total++;
                     tiles[index] = total
                 }
             }
+
             function click(square) {
+                if (!square) return;
                 if (isGameOver) return;
                 if (square.innerText === '🚩') return;
-                const index = square.id;
-                if (tiles[index] === 'clicked') return;
+                const index = parseInt(square.id);
+                if (clicked.includes(index)) return;
                 if (tiles[index] === 'bomb') {
                     square.setAttribute('class', 'bomb')
                     square.innerText = '💣'
                     gameOver();
                     return
                 }
-                if (tiles[index] !== 'empty') square.innerText = tiles[index] || square.innerText
+                if (tiles[index] !== 0) square.innerText = tiles[index] || square.innerText
                 square.setAttribute('class', 'clicked')
-                // tiles[index] = 'clicked'
-                checkSurroundingTiles(square, index)
+                clicked.push(index)
+                checkSurroundingTiles(index)
             }
 
-            function checkSurroundingTiles(square, index) {
-                if (tiles[index] !== 'empty') return;
-                console.log('check neibours')
+            function checkSurroundingTiles(index) {
+                if (tiles[index] !== 0) return;
+                if (!isTop(index) && !clicked.includes(topIndex(index)))
+                    click(squares[topIndex(index)]);
+                if (!isTop(index) && !isLeft(index) && !clicked.includes(topLeftIndex(index)))
+                    click(squares[topLeftIndex(index)]);
+                if (!isTop(index) && !isRight(index) && !clicked.includes(topRightIndex(index)))
+                    click(squares[topRightIndex(index)]);
+                if (!isBottom(index) && !clicked.includes(bottomIndex(index)))
+                    click(squares[bottomIndex(index)]);
+                if (!isBottom(index) && !isLeft(index) && !clicked.includes(bottomLeftIndex(index)))
+                    click(squares[bottomLeftIndex(index)]);
+                if (!isBottom(index) && !isRight(index) && !clicked.includes(bottomRightIndex(index)))
+                    click(squares[bottomRightIndex(index)]);
+                if (!isRight(index) && !clicked.includes(rightIndex(index)))
+                    click(squares[rightIndex(index)]);
+                if (!isLeft(index) && !clicked.includes(leftIndex(index)))
+                    click(squares[leftIndex(index)]);
             }
 
             function contextmenu(event, square) {
                 event.preventDefault();
+                if (clicked.includes(square.id)) return;
                 if (square.innerText !== '🚩') {
                     square.innerText = '🚩'
                     return
@@ -118,6 +139,38 @@
 
             function isBottom(number) {
                 return number >= ((width*height) - width) && number <= width*height
+            }
+
+            function topIndex(index) {
+               return index-width;
+            }
+
+            function topLeftIndex(index) {
+                return index-width-1
+            }
+
+            function topRightIndex(index) {
+                return index-width+1;
+            }
+
+            function leftIndex(index) {
+                return index-1;
+            }
+
+            function rightIndex(index) {
+                return index+1;
+            }
+
+            function bottomIndex(index) {
+                return index+width;
+            }
+
+            function bottomLeftIndex(index) {
+                return index+width-1;
+            }
+
+            function bottomRightIndex(index) {
+                return index+width+1;
             }
         </script>
     </head>
