@@ -9,6 +9,7 @@
                 height: 400px;
                 display: flex;
                 flex-wrap: wrap;
+                margin: auto;
             }
             .grid div {
                 background-color: grey;
@@ -27,33 +28,57 @@
                 background-color: lightgrey !important
             }
             .bomb {
-                background-color: red;
+                background-color: red !important;
             }
         </style>
         <script>
             document.addEventListener('DOMContentLoaded', createGame);
             const width = 10;
             const height = 10;
-            const numberOfBombs = 15;
+            const numberOfBombs = 5;
             const showIndizes = false;
             const squares = [];
             const empty = Array((width*height)-numberOfBombs).fill(0)
             const bombs = Array(numberOfBombs).fill('bomb')
-            const tiles = [...empty, ...bombs].sort(() => Math.random() - 0.5)
+            let tiles = shuffle([...empty, ...bombs])
             let isGameOver = false;
-            const clicked = [];
+            let clicked = [];
+            function resetGame() {
+                for (let square of squares) {
+                    square.classList.remove('bomb')
+                    square.classList.remove('clicked')
+                    square.innerText = '';
+                }
+                tiles = shuffle([...empty, ...bombs])
+                clicked = [];
+                generateNumbers()
+                isGameOver = false
+            }
+
+            function shuffle(arr) {
+                return arr.sort(() => Math.random() - 0.5)
+            }
+
             function createGame() {
                 const grid = document.getElementById('grid');
                 for (let i = 0; i < width*height; i++) {
                     const square = document.createElement('div');
                     square.setAttribute('id', i.toString())
-                    if (showIndizes) square.innerText = i.toString()
                     grid.appendChild(square)
                     squares.push(square)
                     square.addEventListener('click', () => click(square))
                     square.addEventListener('contextmenu', (e) => contextmenu(e, square))
                 }
+                const button = document.createElement('button')
+                button.innerText = 'Restart Game'
+                button.addEventListener('click', () => resetGame())
+                document.body.appendChild(button)
+                generateNumbers();
+            }
+
+            function generateNumbers() {
                 for (let [index, tile] of tiles.entries()) {
+                    if (showIndizes) squares[index].innerText = index.toString()
                     if (tile === 'bomb')
                         continue;
                     let total = 0;
@@ -76,15 +101,21 @@
                 const index = parseInt(square.id);
                 if (clicked.includes(index)) return;
                 if (tiles[index] === 'bomb') {
-                    square.setAttribute('class', 'bomb')
-                    square.innerText = '💣'
-                    gameOver();
-                    return
+                    return showAllBombs()
                 }
                 if (tiles[index] !== 0) square.innerText = tiles[index] || square.innerText
                 square.setAttribute('class', 'clicked')
                 clicked.push(index)
                 checkSurroundingTiles(index)
+            }
+
+            function showAllBombs() {
+                for (let [index, tile] of tiles.entries()) {
+                    if (tile !== 'bomb') continue
+                    squares[index].setAttribute('class', 'bomb')
+                    squares[index].innerText = '💣'
+                }
+                isGameOver = true
             }
 
             function checkSurroundingTiles(index) {
@@ -109,20 +140,12 @@
 
             function contextmenu(event, square) {
                 event.preventDefault();
-                if (clicked.includes(square.id)) return;
+                if (clicked.includes(parseInt(square.id)) || isGameOver) return;
                 if (square.innerText !== '🚩') {
                     square.innerText = '🚩'
                     return
                 }
                 square.innerText = showIndizes ? square.id : ''
-            }
-
-            function gameOver() {
-                isGameOver = true;
-                const button = document.createElement('button')
-                button.innerText = 'Restart Game'
-                button.addEventListener('click', () => location.reload())
-                document.body.appendChild(button)
             }
 
             function isLeft(number) {
