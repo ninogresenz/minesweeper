@@ -30,19 +30,35 @@
             .bomb {
                 background-color: red !important;
             }
+            .game {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+
+            .game button {
+                width: 400px;
+                margin-top: 10px;
+            }
         </style>
         <script>
             document.addEventListener('DOMContentLoaded', createGame);
             const width = 10;
             const height = 10;
-            const numberOfBombs = 5;
+            const numberOfBombs = 10;
             const showIndizes = false;
+            const FLAG = '🚩';
+            const BOMB = '💣';
+            const CROSS = '❌';
             const squares = [];
             const empty = Array((width*height)-numberOfBombs).fill(0)
-            const bombs = Array(numberOfBombs).fill('bomb')
+            const bombs = Array(numberOfBombs).fill(BOMB)
             let tiles = shuffle([...empty, ...bombs])
             let isGameOver = false;
             let clicked = [];
+            let bombIndexes = [];
+            let flagIndexes = [];
             function resetGame() {
                 for (let square of squares) {
                     square.classList.remove('bomb')
@@ -51,12 +67,21 @@
                 }
                 tiles = shuffle([...empty, ...bombs])
                 clicked = [];
+                bombIndexes = [];
+                flagIndexes = [];
                 generateNumbers()
                 isGameOver = false
+
             }
 
             function shuffle(arr) {
-                return arr.sort(() => Math.random() - 0.5)
+                for (let i = arr.length-1; i > 0; i--){
+                    const j = Math.floor(Math.random() * (width*height))
+                    const temp = arr[i]
+                    arr[i] = arr[j]
+                    arr[j] = temp
+                }
+                return arr;
             }
 
             function createGame() {
@@ -69,27 +94,25 @@
                     square.addEventListener('click', () => click(square))
                     square.addEventListener('contextmenu', (e) => contextmenu(e, square))
                 }
-                const button = document.createElement('button')
-                button.innerText = 'Restart Game'
-                button.addEventListener('click', () => resetGame())
-                document.body.appendChild(button)
                 generateNumbers();
             }
 
             function generateNumbers() {
                 for (let [index, tile] of tiles.entries()) {
                     if (showIndizes) squares[index].innerText = index.toString()
-                    if (tile === 'bomb')
+                    if (tile === BOMB) {
+                        bombIndexes.push(index)
                         continue;
+                    }
                     let total = 0;
-                    if (!isTop(index) && tiles[topIndex(index)] === 'bomb') total++;
-                    if (!isTop(index) && !isLeft(index) && tiles[topLeftIndex(index)] === 'bomb') total++;
-                    if (!isTop(index) && !isRight(index) && tiles[topRightIndex(index)] === 'bomb') total++;
-                    if (!isBottom(index) && tiles[bottomIndex(index)] === 'bomb') total++;
-                    if (!isBottom(index) && !isLeft(index) && tiles[bottomLeftIndex(index)] === 'bomb') total++;
-                    if (!isBottom(index) && !isRight(index) && tiles[bottomRightIndex(index)] === 'bomb') total++;
-                    if (!isRight(index) && tiles[rightIndex(index)] === 'bomb') total++;
-                    if (!isLeft(index) && tiles[leftIndex(index)] === 'bomb') total++;
+                    if (!isTop(index) && tiles[topIndex(index)] === BOMB) total++;
+                    if (!isTop(index) && !isLeft(index) && tiles[topLeftIndex(index)] === BOMB) total++;
+                    if (!isTop(index) && !isRight(index) && tiles[topRightIndex(index)] === BOMB) total++;
+                    if (!isBottom(index) && tiles[bottomIndex(index)] === BOMB) total++;
+                    if (!isBottom(index) && !isLeft(index) && tiles[bottomLeftIndex(index)] === BOMB) total++;
+                    if (!isBottom(index) && !isRight(index) && tiles[bottomRightIndex(index)] === BOMB) total++;
+                    if (!isRight(index) && tiles[rightIndex(index)] === BOMB) total++;
+                    if (!isLeft(index) && tiles[leftIndex(index)] === BOMB) total++;
                     tiles[index] = total
                 }
             }
@@ -97,10 +120,10 @@
             function click(square) {
                 if (!square) return;
                 if (isGameOver) return;
-                if (square.innerText === '🚩') return;
+                if (square.innerText === FLAG) return;
                 const index = parseInt(square.id);
                 if (clicked.includes(index)) return;
-                if (tiles[index] === 'bomb') {
+                if (tiles[index] === BOMB) {
                     return showAllBombs()
                 }
                 if (tiles[index] !== 0) square.innerText = tiles[index] || square.innerText
@@ -111,11 +134,24 @@
 
             function showAllBombs() {
                 for (let [index, tile] of tiles.entries()) {
-                    if (tile !== 'bomb') continue
-                    squares[index].setAttribute('class', 'bomb')
-                    squares[index].innerText = '💣'
+                    const square = squares[index];
+                    if (tile === BOMB && square.innerText === FLAG)
+                        continue;
+                    if (tile !== BOMB && square.innerText === FLAG) {
+                        square.innerText = CROSS
+                        continue
+                    }
+                    if (tile === BOMB) {
+                        square.setAttribute('class', 'bomb')
+                        square.innerText = BOMB
+                    }
                 }
+                showGameOver()
+            }
+
+            function showGameOver() {
                 isGameOver = true
+                console.log('game over!')
             }
 
             function checkSurroundingTiles(index) {
@@ -140,12 +176,29 @@
 
             function contextmenu(event, square) {
                 event.preventDefault();
-                if (clicked.includes(parseInt(square.id)) || isGameOver) return;
-                if (square.innerText !== '🚩') {
-                    square.innerText = '🚩'
-                    return
+                const squareId = parseInt(square.id);
+                if (clicked.includes(squareId) || isGameOver) return;
+                if (square.innerText === FLAG) {
+                    flagIndexes.splice(flagIndexes.indexOf(squareId), 1);
+                    square.innerText = showIndizes ? square.id : '';
+                } else {
+                    flagIndexes.push(squareId)
+                    square.innerText = FLAG
                 }
-                square.innerText = showIndizes ? square.id : ''
+                if (flagIndexes.length === numberOfBombs && isGameSuccess())
+                    showSuccess()
+            }
+
+            function showSuccess() {
+                 console.log('success')
+            }
+
+            function isGameSuccess() {
+                for (let flagIndex of flagIndexes) {
+                    if (!bombIndexes.includes(flagIndex))
+                        return false;
+                }
+                return true
             }
 
             function isLeft(number) {
@@ -198,6 +251,9 @@
         </script>
     </head>
     <body>
-        <div class="grid" id="grid"></div>
+        <div class="game">
+            <div class="grid" id="grid"></div>
+            <button onclick="resetGame()">Reset Game</button>
+        </div>
     </body>
 </html>
